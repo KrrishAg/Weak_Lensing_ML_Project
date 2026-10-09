@@ -1,0 +1,64 @@
+seed: 20261007
+
+data:
+  # Full upgraded FAIR-Universe public training set (recommended by organizers).
+  data_dir: data/raw
+  kappa_file: WIDE12H_bin2_2arcmin_kappa_newrealization.npy
+  label_file: label_newrealization.npy
+  mask_file: WIDE12H_bin2_2arcmin_mask.npy
+  height: 1424
+  width: 176
+  pixel_size_arcmin: 2.0
+  ng: 30.0
+  sigma_epsilon: 0.4
+
+  # k=4 reduces 1424x176 -> 356x44. Use 1 for full resolution.
+  pool_factor: 4
+  use_cache: true
+  cache_file: data/cache/k4_noiseless_float16.npy
+
+  # Primary comparison split: hold out realizations while keeping all 101
+  # cosmologies represented, matching the organizer-style evaluation question.
+  split_strategy: realization
+  val_cosmologies: 10      # ignored for realization split
+  test_cosmologies: 10     # ignored for realization split
+  val_fraction: 0.10
+  test_fraction: 0.10
+  split_seed: 5566
+
+  # Set these for a quick debug run; leave null for the full run.
+  max_train_samples: null
+  max_val_samples: null
+  max_test_samples: null
+  stats_samples: 512
+  noise_repeats_per_epoch: 1
+
+model:
+  base_channels: 24
+  dropout: 0.10
+  multiscale: false
+
+training:
+  ensemble_size: 3
+  epochs: 20
+  batch_size: 32
+  learning_rate: 0.0005
+  weight_decay: 0.0001
+  nuisance_weight: 0.35
+  num_workers: 2
+  patience: 5
+  grad_clip_norm: 5.0
+  device: auto
+
+calibration:
+  enabled: true
+  target_coverage: 0.68
+
+physics:
+  ps_bins: 24
+  ps_fit_samples: 1500
+  ps_ridge_alpha: 1.0
+
+ood:
+  synthetic_samples: 512
+  fusion_weights: [1.0, 1.0, 1.0]

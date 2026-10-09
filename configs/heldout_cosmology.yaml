@@ -1,0 +1,58 @@
+seed: 20261007
+
+data:
+  data_dir: data/raw
+  kappa_file: WIDE12H_bin2_2arcmin_kappa_newrealization.npy
+  label_file: label_newrealization.npy
+  mask_file: WIDE12H_bin2_2arcmin_mask.npy
+  height: 1424
+  width: 176
+  pixel_size_arcmin: 2.0
+  ng: 30.0
+  sigma_epsilon: 0.4
+  pool_factor: 4
+  use_cache: true
+  cache_file: data/cache/k4_noiseless_float16.npy
+
+  # Secondary stress test: no cosmology is shared across train/val/test.
+  split_strategy: cosmology
+  val_cosmologies: 10
+  test_cosmologies: 10
+  val_fraction: 0.10
+  test_fraction: 0.10
+  split_seed: 5566
+  max_train_samples: null
+  max_val_samples: null
+  max_test_samples: null
+  stats_samples: 512
+  noise_repeats_per_epoch: 1
+
+model:
+  base_channels: 24
+  dropout: 0.10
+  multiscale: false
+
+training:
+  ensemble_size: 3
+  epochs: 20
+  batch_size: 32
+  learning_rate: 0.0005
+  weight_decay: 0.0001
+  nuisance_weight: 0.35
+  num_workers: 2
+  patience: 5
+  grad_clip_norm: 5.0
+  device: auto
+
+calibration:
+  enabled: true
+  target_coverage: 0.68
+
+physics:
+  ps_bins: 24
+  ps_fit_samples: 1500
+  ps_ridge_alpha: 1.0
+
+ood:
+  synthetic_samples: 512
+  fusion_weights: [1.0, 1.0, 1.0]

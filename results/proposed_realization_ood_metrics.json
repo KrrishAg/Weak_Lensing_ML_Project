@@ -1,0 +1,74 @@
+{
+  "extra_noise": {
+    "ensemble_disagreement": {
+      "auroc": 0.6288795471191406,
+      "low_fpr_tpr": 0.03583984375
+    },
+    "nuisance_prior": {
+      "auroc": 0.5804100036621094,
+      "low_fpr_tpr": 0.0496484375
+    },
+    "power_spectrum": {
+      "auroc": 0.9625129699707031,
+      "low_fpr_tpr": 0.28193359375
+    },
+    "hybrid": {
+      "auroc": 0.9094619750976562,
+      "low_fpr_tpr": 0.2016015625
+    }
+  },
+  "smooth": {
+    "ensemble_disagreement": {
+      "auroc": 0.9598617553710938,
+      "low_fpr_tpr": 0.5068359375
+    },
+    "nuisance_prior": {
+      "auroc": 0.8756332397460938,
+      "low_fpr_tpr": 0.02853515625
+    },
+    "power_spectrum": {
+      "auroc": 1.0,
+      "low_fpr_tpr": 1.0
+    },
+    "hybrid": {
+      "auroc": 1.0,
+      "low_fpr_tpr": 1.0
+    }
+  },
+  "amplitude": {
+    "ensemble_disagreement": {
+      "auroc": 0.8031845092773438,
+      "low_fpr_tpr": 0.20951171875
+    },
+    "nuisance_prior": {
+      "auroc": 0.9955825805664062,
+      "low_fpr_tpr": 0.93267578125
+    },
+    "power_spectrum": {
+      "auroc": 0.9993782043457031,
+      "low_fpr_tpr": 0.95478515625
+    },
+    "hybrid": {
+      "auroc": 0.9998130798339844,
+      "low_fpr_tpr": 0.98490234375
+    }
+  },
+  "highfreq": {
+    "ensemble_disagreement": {
+      "auroc": 0.9996719360351562,
+      "low_fpr_tpr": 0.98181640625
+    },
+    "nuisance_prior": {
+      "auroc": 1.0,
+      "low_fpr_tpr": 1.0
+    },
+    "power_spectrum": {
+      "auroc": 1.0,
+      "low_fpr_tpr": 1.0
+    },
+    "hybrid": {
+      "auroc": 1.0,
+      "low_fpr_tpr": 1.0
+    }
+  }
+}

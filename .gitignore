@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.DS_Store
+__MACOSX/
+
+# Large datasets
+data/raw/*.npy
+data/sample/*.npy
+data/cache/*.npy
+
+# Large trained models
+checkpoints/*.pt
+
+# Large intermediate predictions
+results/*.npz
+
+# Keep JSON metrics, CSV tables and PNG figures
