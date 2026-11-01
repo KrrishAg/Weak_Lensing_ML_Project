@@ -61,4 +61,20 @@ physics:
 
 ood:
   synthetic_samples: 512
+  # Nuisance-prior score windows [tagn_lo, tagn_hi, f0_lo, f0_hi]. Reference values are
+  # the training-label ranges; tuned by grid search on validation shifts (test untouched).
+  prior_bounds: [7.2, 8.5, 0.0, 0.0265]
+  tune_prior_bounds: true
+  # Grid runs from the reference (training-label range) down to roughly the 1-99% range of
+  # in-distribution validation predictions (TAGN 7.57-8.08, f0 0.0121-0.0151); a window
+  # tighter than that would flag normal maps. Reference value listed first so ties keep it.
+  prior_grid:
+    tagn_lo: [7.2, 7.3, 7.4, 7.5, 7.6]
+    tagn_hi: [8.5, 8.4, 8.3, 8.2, 8.1]
+    f0_lo: [0.0, 0.004, 0.008, 0.010, 0.012]
+    f0_hi: [0.0265, 0.023, 0.020, 0.018, 0.016]
+  # Fixed reference weights [disagreement, nuisance prior, power spectrum].
   fusion_weights: [1.0, 1.0, 1.0]
+  # Tune the 3 fusion weights by grid search on validation shifts (test untouched).
+  tune_fusion_weights: true
+  fusion_grid_step: 0.05

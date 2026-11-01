@@ -15,6 +15,14 @@
     "hybrid": {
       "auroc": 0.9094619750976562,
       "low_fpr_tpr": 0.2016015625
+    },
+    "nuisance_prior_tuned": {
+      "auroc": 0.5809669494628906,
+      "low_fpr_tpr": 0.0489453125
+    },
+    "hybrid_tuned": {
+      "auroc": 0.9588546752929688,
+      "low_fpr_tpr": 0.27716796875
     }
   },
   "smooth": {
@@ -31,6 +39,14 @@
       "low_fpr_tpr": 1.0
     },
     "hybrid": {
+      "auroc": 1.0,
+      "low_fpr_tpr": 1.0
+    },
+    "nuisance_prior_tuned": {
+      "auroc": 0.9999504089355469,
+      "low_fpr_tpr": 0.99568359375
+    },
+    "hybrid_tuned": {
       "auroc": 1.0,
       "low_fpr_tpr": 1.0
     }
@@ -51,6 +67,14 @@
     "hybrid": {
       "auroc": 0.9998130798339844,
       "low_fpr_tpr": 0.98490234375
+    },
+    "nuisance_prior_tuned": {
+      "auroc": 0.9955673217773438,
+      "low_fpr_tpr": 0.93087890625
+    },
+    "hybrid_tuned": {
+      "auroc": 0.9995651245117188,
+      "low_fpr_tpr": 0.96791015625
     }
   },
   "highfreq": {
@@ -67,6 +91,14 @@
       "low_fpr_tpr": 1.0
     },
     "hybrid": {
+      "auroc": 1.0,
+      "low_fpr_tpr": 1.0
+    },
+    "nuisance_prior_tuned": {
+      "auroc": 1.0,
+      "low_fpr_tpr": 1.0
+    },
+    "hybrid_tuned": {
       "auroc": 1.0,
       "low_fpr_tpr": 1.0
     }

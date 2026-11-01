@@ -22,16 +22,19 @@ def main():
         data = json.load(f)
 
     shifts = list(data)
-    methods = ["ensemble_disagreement", "nuisance_prior", "power_spectrum", "hybrid"]
-    labels = ["ensemble", "nuisance prior", "power spectrum", "hybrid"]
+    methods = ["ensemble_disagreement", "nuisance_prior", "nuisance_prior_tuned", "power_spectrum", "hybrid", "hybrid_tuned"]
+    labels = ["ensemble", "nuisance prior (fixed)", "nuisance prior (tuned)", "power spectrum", "hybrid (fixed)", "hybrid (tuned)"]
+    keep = [j for j, m in enumerate(methods) if m in data[shifts[0]]]
+    methods = [methods[j] for j in keep]
+    labels = [labels[j] for j in keep]
     x = np.arange(len(shifts))
-    width = 0.18
+    width = 0.8 / len(methods)
 
     for metric, ylabel in [("low_fpr_tpr", "Mean TPR at FPR 0.1%-5%"), ("auroc", "AUROC")]:
-        fig, ax = plt.subplots(figsize=(8, 4.5))
+        fig, ax = plt.subplots(figsize=(9, 4.5))
         for j, (method, label) in enumerate(zip(methods, labels)):
             vals = [data[s][method][metric] for s in shifts]
-            ax.bar(x + (j - 1.5) * width, vals, width=width, label=label)
+            ax.bar(x + (j - (len(methods) - 1) / 2) * width, vals, width=width, label=label)
         ax.set_xticks(x, shifts)
         ax.set_ylim(0, 1)
         ax.set_ylabel(ylabel)

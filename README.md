@@ -21,9 +21,9 @@ Can one compact model retain accurate cosmological inference while becoming more
 - deep ensemble support
 - validation-only uncertainty calibration and empirical coverage
 - ensemble-disagreement OoD score
-- nuisance-prior-violation OoD score
+- nuisance-prior-violation OoD score, with the TAGN/f0 window bounds tuned by grid search on validation shifts (label ranges kept as reference)
 - binned power-spectrum physics-consistency score
-- fixed z-score fusion of the three novelty signals
+- z-score fusion of the three novelty signals, with the 3 fusion weights tuned by grid search on validation shifts (fixed `[1,1,1]` kept as reference)
 - controlled synthetic distribution shifts for offline OoD evaluation
 - automatic report-ready figures, Markdown tables, and CSV tables
 
@@ -111,6 +111,16 @@ python scripts/evaluate_ood.py --config configs/default.yaml --tag proposed_real
 python scripts/summarize_ood.py --tag proposed_realization
 python scripts/make_ood_figures.py --tag proposed_realization
 ```
+With `ood.tune_prior_bounds: true` (default), `evaluate_ood.py` first grid-searches the nuisance-prior
+window bounds `[tagn_lo, tagn_hi, f0_lo, f0_hi]` over `ood.prior_grid` on **validation** maps and
+their shifted copies only, maximizing the prior score's mean low-FPR TPR. The result is written to
+`results/proposed_realization_prior_tuning.json` and reported on test as `nuisance_prior_tuned`.
+
+With `ood.tune_fusion_weights: true` (default), `evaluate_ood.py` then grid-searches the three fusion
+weights `[disagreement, nuisance prior, power spectrum]` on the simplex (step `ood.fusion_grid_step`)
+using **validation** maps and their shifted copies only, maximizing mean low-FPR TPR. The selected
+weights are written to `results/proposed_realization_fusion_tuning.json` and evaluated once on the
+untouched test split as `hybrid_tuned`, next to the fixed-weight `hybrid`.
 
 ## 8. Secondary held-out-cosmology experiment
 ```bash

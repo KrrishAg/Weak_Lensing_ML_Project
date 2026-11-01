@@ -18,10 +18,13 @@ from wl_project.evaluation import materialize_maps, predict_array, shifted_maps
 from wl_project.metrics import ood_metrics
 from wl_project.models import MultiTaskWeakLensingNet
 from wl_project.ood import (
+    PRIOR_BOUNDS,
     ensemble_disagreement,
     fit_standardizers,
     fuse,
     nuisance_prior_violation,
+    tune_fusion_weights,
+    tune_prior_bounds,
 )
 from wl_project.physics import PowerSpectrumReference
 from wl_project.utils import load_yaml, resolve_device, save_json
@@ -59,14 +62,27 @@ def physical_nuis(nuis_scaled, label_mean, label_std):
     return nuis_scaled * label_std[2:] + label_mean[2:]
 
 
-def signal_triplet(members, maps, device, batch, label_mean, label_std, psref):
+def raw_signals(members, maps, device, batch, label_mean, label_std, psref):
+    """Disagreement, predicted physical nuisances and power-spectrum score for a set of maps."""
     means, _, nuis = predict_ensemble(members, maps, device, batch)
     disagreement = ensemble_disagreement(means)
     nuisance_mean = physical_nuis(nuis.mean(axis=0), label_mean, label_std)
-    prior = nuisance_prior_violation(nuisance_mean)
     cosmo = physical_mean(means.mean(axis=0), label_mean, label_std)
     ps = psref.score(maps, cosmo)
-    return disagreement, prior, ps
+    return disagreement, nuisance_mean, ps
+
+
+def with_prior(raw, bounds):
+    """Signal triplet with the nuisance-prior score computed for the given bounds."""
+    return raw[0], nuisance_prior_violation(raw[1], bounds), raw[2]
+
+
+def mean_val_metrics(ind, ood_sets):
+    m = [ood_metrics(ind, o) for o in ood_sets]
+    return {
+        "val_low_fpr_tpr": float(np.mean([x["low_fpr_tpr"] for x in m])),
+        "val_auroc": float(np.mean([x["auroc"] for x in m])),
+    }
 
 
 def choose(dataset, n, rng):
@@ -135,49 +151,97 @@ def main() -> None:
     )
 
     # Validation maps define the InD score normalization. Test maps remain untouched.
+    batch = t["batch_size"] * 2
     val_maps, _ = choose(val_ds, min(n, len(val_ds)), rng)
-    val_signals = signal_triplet(
-        members,
-        val_maps,
-        device,
-        t["batch_size"] * 2,
-        label_mean,
-        label_std,
-        psref,
-    )
+    val_raw = raw_signals(members, val_maps, device, batch, label_mean, label_std, psref)
+    ref_bounds = [float(b) for b in ocfg.get("prior_bounds", PRIOR_BOUNDS)]
+    val_signals = with_prior(val_raw, ref_bounds)
     standardizers = fit_standardizers(*val_signals)
 
-    test_maps, _ = choose(test_ds, min(n, len(test_ds)), rng)
-    ind_signals = signal_triplet(
-        members,
-        test_maps,
-        device,
-        t["batch_size"] * 2,
-        label_mean,
-        label_std,
-        psref,
-    )
-    ind_hybrid = fuse(ind_signals, standardizers, ocfg["fusion_weights"])
-
     shifts = ["extra_noise", "smooth", "amplitude", "highfreq"]
+    tune_bounds = ocfg.get("tune_prior_bounds", False)
+    tune_weights = ocfg.get("tune_fusion_weights", False)
+
+    # Hyperparameter tuning (prior bounds, then fusion weights) uses validation maps only,
+    # shifted with seeds disjoint from the test shifts. Test maps remain untouched.
+    if tune_bounds or tune_weights:
+        val_ood_raw = {}
+        for j, kind in enumerate(shifts):
+            vmaps = shifted_maps(val_maps, kind, cfg["seed"] + 500000 + j * 10000)
+            val_ood_raw[kind] = raw_signals(
+                members, vmaps, device, batch, label_mean, label_std, psref
+            )
+
+    tuned_bounds = ref_bounds
+    if tune_bounds:
+        val_ood_nuis = {k: r[1] for k, r in val_ood_raw.items()}
+        tuned_bounds, bgrid = tune_prior_bounds(val_raw[1], val_ood_nuis, ocfg["prior_grid"])
+        ref_val = mean_val_metrics(
+            nuisance_prior_violation(val_raw[1], ref_bounds),
+            [nuisance_prior_violation(o, ref_bounds) for o in val_ood_nuis.values()],
+        )
+        save_json(
+            ROOT / "results" / f"{args.tag}_prior_tuning.json",
+            {
+                "objective": "nuisance-prior score alone: mean low-FPR TPR over validation shifts (tie-break mean AUROC)",
+                "parameters": ["tagn_lo", "tagn_hi", "f0_lo", "f0_hi"],
+                "grid": ocfg["prior_grid"],
+                "n_candidates": len(bgrid),
+                "best_bounds": tuned_bounds,
+                "best": bgrid[0],
+                "reference_bounds": {"bounds": ref_bounds, **ref_val},
+                "top10": bgrid[:10],
+            },
+        )
+        print("tuned prior bounds [tagn_lo, tagn_hi, f0_lo, f0_hi]:", tuned_bounds)
+
+    val_tuned = with_prior(val_raw, tuned_bounds)
+    tuned_standardizers = fit_standardizers(*val_tuned)
+    tuned_weights = [float(w) for w in ocfg["fusion_weights"]]
+    if tune_weights:
+        val_ood = {k: with_prior(r, tuned_bounds) for k, r in val_ood_raw.items()}
+        tuned_weights, grid = tune_fusion_weights(
+            val_tuned, val_ood, tuned_standardizers, ocfg.get("fusion_grid_step", 0.05)
+        )
+        fixed_val = mean_val_metrics(
+            fuse(val_tuned, tuned_standardizers, ocfg["fusion_weights"]),
+            [fuse(s, tuned_standardizers, ocfg["fusion_weights"]) for s in val_ood.values()],
+        )
+        save_json(
+            ROOT / "results" / f"{args.tag}_fusion_tuning.json",
+            {
+                "objective": "mean low-FPR TPR over validation shifts (tie-break mean AUROC)",
+                "prior_bounds_used": tuned_bounds,
+                "grid_step": ocfg.get("fusion_grid_step", 0.05),
+                "n_candidates": len(grid),
+                "best_weights": tuned_weights,
+                "best": grid[0],
+                "fixed_weights": {"weights": [float(w) for w in ocfg["fusion_weights"]], **fixed_val},
+                "top10": grid[:10],
+            },
+        )
+        print("tuned fusion weights [disagreement, prior, power_spectrum]:", tuned_weights)
+
+    test_maps, _ = choose(test_ds, min(n, len(test_ds)), rng)
+    test_raw = raw_signals(members, test_maps, device, batch, label_mean, label_std, psref)
+    ind_signals = with_prior(test_raw, ref_bounds)
+    ind_prior_tuned = nuisance_prior_violation(test_raw[1], tuned_bounds)
+    ind_hybrid = fuse(ind_signals, standardizers, ocfg["fusion_weights"])
+    ind_tuned = fuse(with_prior(test_raw, tuned_bounds), tuned_standardizers, tuned_weights)
+
     report = {}
     arrays = {
         "ind_disagreement": ind_signals[0],
         "ind_prior": ind_signals[1],
+        "ind_prior_tuned": ind_prior_tuned,
         "ind_power_spectrum": ind_signals[2],
         "ind_hybrid": ind_hybrid,
+        "ind_hybrid_tuned": ind_tuned,
     }
     for j, kind in enumerate(shifts):
         omaps = shifted_maps(test_maps, kind, cfg["seed"] + j * 10000)
-        osig = signal_triplet(
-            members,
-            omaps,
-            device,
-            t["batch_size"] * 2,
-            label_mean,
-            label_std,
-            psref,
-        )
+        oraw = raw_signals(members, omaps, device, batch, label_mean, label_std, psref)
+        osig = with_prior(oraw, ref_bounds)
         hybrid = fuse(osig, standardizers, ocfg["fusion_weights"])
         report[kind] = {
             "ensemble_disagreement": ood_metrics(ind_signals[0], osig[0]),
@@ -185,6 +249,14 @@ def main() -> None:
             "power_spectrum": ood_metrics(ind_signals[2], osig[2]),
             "hybrid": ood_metrics(ind_hybrid, hybrid),
         }
+        if tune_bounds:
+            prior_tuned = nuisance_prior_violation(oraw[1], tuned_bounds)
+            report[kind]["nuisance_prior_tuned"] = ood_metrics(ind_prior_tuned, prior_tuned)
+            arrays[f"{kind}_prior_tuned"] = prior_tuned
+        if tune_bounds or tune_weights:
+            tuned = fuse(with_prior(oraw, tuned_bounds), tuned_standardizers, tuned_weights)
+            report[kind]["hybrid_tuned"] = ood_metrics(ind_tuned, tuned)
+            arrays[f"{kind}_hybrid_tuned"] = tuned
         arrays[f"{kind}_disagreement"] = osig[0]
         arrays[f"{kind}_prior"] = osig[1]
         arrays[f"{kind}_power_spectrum"] = osig[2]

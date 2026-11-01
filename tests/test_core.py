@@ -19,7 +19,7 @@ from wl_project.data import (
 from wl_project.losses import multitask_loss
 from wl_project.metrics import fit_sigma_scale, low_fpr_tpr_score
 from wl_project.models import MultiTaskWeakLensingNet
-from wl_project.ood import nuisance_prior_violation
+from wl_project.ood import fit_standardizers, nuisance_prior_violation, tune_fusion_weights, tune_prior_bounds, weight_grid
 from wl_project.physics import radial_power_spectrum
 
 
@@ -126,3 +126,22 @@ def test_pooled_noise_variance_formula():
     native = shape_noise_sigma()
     pooled = native * np.sqrt(counts) / 16
     assert np.allclose(pooled, native / 4)
+
+
+def test_fusion_weight_tuning_prefers_informative_signal():
+    rng = np.random.default_rng(0)
+    ind = [rng.normal(size=400) for _ in range(3)]
+    ood = {"shift": [rng.normal(size=400), rng.normal(size=400), rng.normal(4.0, 1.0, size=400)]}
+    assert len(weight_grid(0.1)) == 66
+    best, rows = tune_fusion_weights(ind, ood, fit_standardizers(*ind), step=0.1)
+    assert best[2] == max(best)
+    assert rows[0]["val_low_fpr_tpr"] >= rows[-1]["val_low_fpr_tpr"]
+
+
+def test_prior_bound_tuning_tightens_window_for_shifted_tagn():
+    rng = np.random.default_rng(0)
+    ind = np.c_[rng.uniform(7.6, 8.0, 300), rng.uniform(0.012, 0.015, 300), rng.normal(0, 0.005, 300)]
+    ood = ind.copy(); ood[:, 0] += 0.3          # shifted TAGN predictions stay inside [7.2, 8.5]
+    grid = {"tagn_lo": [7.2, 7.5], "tagn_hi": [8.5, 8.1], "f0_lo": [0.0], "f0_hi": [0.0265]}
+    best, rows = tune_prior_bounds(ind, {"shift": ood}, grid)
+    assert best[1] == 8.1 and len(rows) == 4

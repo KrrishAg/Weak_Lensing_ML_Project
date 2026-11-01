@@ -1,0 +1,126 @@
+{
+  "objective": "mean low-FPR TPR over validation shifts (tie-break mean AUROC)",
+  "prior_bounds_used": [
+    7.6,
+    8.1,
+    0.012,
+    0.016
+  ],
+  "grid_step": 0.05,
+  "n_candidates": 231,
+  "best_weights": [
+    0.2,
+    0.1,
+    0.7
+  ],
+  "best": {
+    "weights": [
+      0.2,
+      0.1,
+      0.7
+    ],
+    "val_low_fpr_tpr": 0.86021484375,
+    "val_auroc": 0.9874849319458008
+  },
+  "fixed_weights": {
+    "weights": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "val_low_fpr_tpr": 0.8268115234375,
+    "val_auroc": 0.9755430221557617
+  },
+  "top10": [
+    {
+      "weights": [
+        0.2,
+        0.1,
+        0.7
+      ],
+      "val_low_fpr_tpr": 0.86021484375,
+      "val_auroc": 0.9874849319458008
+    },
+    {
+      "weights": [
+        0.25,
+        0.05,
+        0.7
+      ],
+      "val_low_fpr_tpr": 0.8601708984375,
+      "val_auroc": 0.9873294830322266
+    },
+    {
+      "weights": [
+        0.2,
+        0.05,
+        0.75
+      ],
+      "val_low_fpr_tpr": 0.86,
+      "val_auroc": 0.9878578186035156
+    },
+    {
+      "weights": [
+        0.25,
+        0.1,
+        0.65
+      ],
+      "val_low_fpr_tpr": 0.85958984375,
+      "val_auroc": 0.9868144989013672
+    },
+    {
+      "weights": [
+        0.2,
+        0.0,
+        0.8
+      ],
+      "val_low_fpr_tpr": 0.8594287109375,
+      "val_auroc": 0.9880819320678711
+    },
+    {
+      "weights": [
+        0.15,
+        0.1,
+        0.75
+      ],
+      "val_low_fpr_tpr": 0.859404296875,
+      "val_auroc": 0.9878702163696289
+    },
+    {
+      "weights": [
+        0.25,
+        0.0,
+        0.75
+      ],
+      "val_low_fpr_tpr": 0.8591064453125,
+      "val_auroc": 0.9876508712768555
+    },
+    {
+      "weights": [
+        0.15,
+        0.05,
+        0.8
+      ],
+      "val_low_fpr_tpr": 0.8590380859375,
+      "val_auroc": 0.9881496429443359
+    },
+    {
+      "weights": [
+        0.2,
+        0.15,
+        0.65
+      ],
+      "val_low_fpr_tpr": 0.8589404296875001,
+      "val_auroc": 0.9868745803833008
+    },
+    {
+      "weights": [
+        0.3,
+        0.05,
+        0.65
+      ],
+      "val_low_fpr_tpr": 0.8587548828125,
+      "val_auroc": 0.9865837097167969
+    }
+  ]
+}

@@ -83,11 +83,15 @@ def main() -> None:
     ood_path = RESULTS / "proposed_realization_ood_metrics.json"
     if ood_path.exists():
         d = load_json(ood_path)
-        methods = ["ensemble_disagreement", "nuisance_prior", "power_spectrum", "hybrid"]
+        methods = ["ensemble_disagreement", "nuisance_prior", "nuisance_prior_tuned", "power_spectrum", "hybrid", "hybrid_tuned"]
+        methods = [m for m in methods if m in next(iter(d.values()))]
         md += [
             "## Offline controlled-shift OoD evaluation",
             "",
             "These are diagnostic synthetic shifts, not the hidden competition OoD distribution.",
+            "`nuisance_prior` / `hybrid` use the fixed reference prior bounds and weights [1,1,1]; "
+            "`nuisance_prior_tuned` / `hybrid_tuned` use prior bounds and fusion weights selected by "
+            "grid search on validation shifts only (see below).",
             "",
             "| Detector | " + " | ".join(d.keys()) + " | Mean low-FPR TPR |",
             "|---|" + "---:|" * (len(d) + 1),
@@ -102,6 +106,41 @@ def main() -> None:
         with (RESULTS / "final_ood_table.csv").open("w", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=list(ood_rows[0]))
             w.writeheader(); w.writerows(ood_rows)
+
+    prior_path = RESULTS / "proposed_realization_prior_tuning.json"
+    if prior_path.exists():
+        tune = load_json(prior_path)
+        ref, best = tune["reference_bounds"], tune["best"]
+        md += [
+            "## Nuisance-prior bound tuning (validation only)",
+            "",
+            f"Grid search over {tune['n_candidates']} candidate windows for (TAGN lo, TAGN hi, f0 lo, f0 hi). "
+            f"Objective: {tune['objective']}.",
+            "",
+            "| Bounds [tagn_lo, tagn_hi, f0_lo, f0_hi] | val mean low-FPR TPR | val mean AUROC |",
+            "|---|---:|---:|",
+            f"| reference {ref['bounds']} | {ref['val_low_fpr_tpr']:.3f} | {ref['val_auroc']:.3f} |",
+            f"| tuned {best['bounds']} | {best['val_low_fpr_tpr']:.3f} | {best['val_auroc']:.3f} |",
+            "",
+        ]
+
+    tuning_path = RESULTS / "proposed_realization_fusion_tuning.json"
+    if tuning_path.exists():
+        tune = load_json(tuning_path)
+        fixed, best = tune["fixed_weights"], tune["best"]
+        md += [
+            "## Fusion-weight hyperparameter tuning (validation only)",
+            "",
+            f"Grid search over {tune['n_candidates']} non-negative weight triplets "
+            f"(step {tune['grid_step']}, normalized to sum 1), using the tuned prior bounds "
+            f"{tune.get('prior_bounds_used')}. Objective: {tune['objective']}.",
+            "",
+            "| Weights [disagreement, prior, power spectrum] | val mean low-FPR TPR | val mean AUROC |",
+            "|---|---:|---:|",
+            f"| fixed {fixed['weights']} | {fixed['val_low_fpr_tpr']:.3f} | {fixed['val_auroc']:.3f} |",
+            f"| tuned {[round(x, 2) for x in best['weights']]} | {best['val_low_fpr_tpr']:.3f} | {best['val_auroc']:.3f} |",
+            "",
+        ]
 
     if len(md) == 4:
         md.append("No measured result files were found yet. Run the training/evaluation scripts first.")
